@@ -1,4 +1,3 @@
-pyutils
-=======
+My random python code not in other packages.
 
-My python utilities that don't live elsewhere.
+Some of these functions depend on astropy.
