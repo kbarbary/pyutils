@@ -4,26 +4,27 @@ from astropy.table import Table
 
 __all__ = ['write_lc', 'read_simlib']
 
-def write_lc(table, filename, varlist=None):
+def writelc(meta, data, filename, usecols=None, varlist=None):
     """Write an SNANA light curve file.
 
     Parameters
     ----------
-    table : astropy.table.Table
+    meta : dict
+        Keys converted to uppercase in output file.
+    data : Structured numpy.ndarray
     filename : str
+    usecols : list, optional
     varlist: list, optional
         List of column names to print in file. Length must match number of 
         columns in table. If ``None`` (default), use column names in the table.
+        Column names will be converted to uppercase.
     """
 
-    if not isinstance(table, Table):
-        try:
-            table = Table(table)
-        except:
-            raise ValueError('table must be astropy.table.Table instance or '
-                             'be able to initialize such.')
+    if usecols is None:
+        colnames = data.dtype.names
+    else:
+        colnames = usecols
 
-    colnames = table.colnames
     nvar = len(colnames)
     if varlist is None:
         varlist = [colname.upper() for colname in colnames]
@@ -31,28 +32,19 @@ def write_lc(table, filename, varlist=None):
         raise ValueError('length of varlist must match number of columns'
                          ' in table')
 
-    # Open output file and write metadata.
     outfile = open(filename, 'w')
-    for key, val in table.meta.iteritems():
-        outfile.write(key.upper() + ': ' + str(val) + '\n')
-
-    # Write header for main table.
+    for key, val in meta.iteritems():
+        outfile.write('{}: {}\n'.format(key.upper(), str(val)))
     outfile.write('\n'
                   '# ==========================================\n'
                   '# TERSE LIGHT CURVE OUTPUT:\n'
                   '#\n'
                   'NOBS: {:d}\n'
                   'NVAR: {:d}\n'
-                  'VARLIST: {}\n'.format(len(table), nvar, ' '.join(varlist)))
-
-    # Write each table row.
-    for row in table:
-        outfile.write('OBS: ')
-        for colname in colnames:
-            outfile.write(str(row[colname]))
-            outfile.write(' ')
-        outfile.write('\n')
-
+                  'VARLIST: {}\n'.format(len(data), nvar, ' '.join(varlist)))
+    for i in range(len(data)):
+        row = [str(data[col][i]) for col in colnames]
+        outfile.write('OBS: {}\n'.format(' '.join(row)))
     outfile.close()
 
 
