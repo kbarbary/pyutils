@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 
 __all__ = ['plotlc']
 
-bandcolors = {'u':'#ff00ff', 'g': '#0000ff', 'r': '#00f0ff',
-              'i':'#00ff00', 'z': '#f6ff00', 'y': '#ff9900'} # red #ff0000
+bandcolors = ['#ff00ff', '#0000ff', '#00f0ff',
+              '#00ff00', '#f6ff00', '#ff9900']
 
-def plotlc(data, tdata, fname, date_offset=0.):
+def plotlc(data, tdata, bands, fname, date_offset=0.):
     """Plot light curve data, save to file.
 
     data : structured `~numpy.ndarray` or None
@@ -15,26 +15,25 @@ def plotlc(data, tdata, fname, date_offset=0.):
     tdata : structured `~numpy.ndarray` or None
         Data to be plotted as lines. Must contain fields:
         {'date', 'band', 'flux', 'zp'} and optionally 'fluxerr'.
-"""
+    """
+
+    if len(bands) == 0 or len(bands) > 6:
+        raise ValueError('Bands should have between 1 and 6 entries.')
 
     fig = plt.figure()
-
-    bands = []
+    databands = []
+    tdatabands = []
     if data is not None:
-        bands.extend(np.unique(data['band']).tolist())
+        databands = np.unique(data['band']).tolist()
     if tdata is not None:
-        bands.extend(np.unique(tdata['band']).tolist())
-    if len(bands) = 0:
-        raise ValueError('No data')
-    if len(bands) > 6:
-        raise ValueError('More than 6 unique bands')
+        tdatabands = np.unique(tdata['band']).tolist()
 
-    for i, band in enumerate(['u', 'g', 'r', 'i', 'z', 'y']):
-        if band not in bands: continue
-        plt.subplot(3, 2, i + 1)
+    for i, band in enumerate(bands):
+        if band not in (databands + tdatabands): continue
+        ax = plt.subplot(2, 3, i + 1)
         normflux = None
 
-        if data is not None and band in data['band']:
+        if band in databands:
             idx = data['band'] == band
 
             zp_factor = 10. ** (-0.4 * data['zp'][idx])
@@ -46,9 +45,9 @@ def plotlc(data, tdata, fname, date_offset=0.):
             fluxerr /= normflux
 
             plt.errorbar(data['date'][idx], flux, fluxerr, ls='None',
-                         marker='.', markersize=3., color=bandcolors[band])
+                         marker='.', markersize=3., color=bandcolors[i])
 
-        if tdata is not None and band in tdata['band']:
+        if band in tdatabands:
             idx = tdata['band'] == band
 
             zp_factor = 10. ** (-0.4 * tdata['zp'][idx])
@@ -71,11 +70,11 @@ def plotlc(data, tdata, fname, date_offset=0.):
                 upper = flux + fluxerr
                 plt.fill(np.concatenate([date, date[::-1]]),
                          np.concatenate([lower, upper[::-1]]),
-                         fc=bandcolors[band], alpha=0.5, ec='None')
+                         fc=bandcolors[i], alpha=0.5, ec='None')
 
             plt.plot(date, flux, ls='-', marker='None',
-                     color=bandcolors[band])
-        plt.text(0.9, 0.9, band, ha='right', va='top')
+                     color=bandcolors[i])
+        plt.text(0.9, 0.9, band, ha='right', va='top', transform=ax.transAxes)
         plt.ylim(ymin=-0.1)
         
     plt.subplots_adjust(left=0.1, right=0.95, bottom=0.1, top=0.97,
